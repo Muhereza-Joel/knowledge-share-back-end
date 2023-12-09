@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Fake user data for authentication
 const fakeUserData = [
-    { email: 'test@example.com', password: 'password123' },
+    {username: 'username', email: 'test@example.com', password: 'password123' },
   ];
 
 router.post("/login", (req, res) => {
@@ -15,7 +15,7 @@ router.post("/login", (req, res) => {
   );
 
   if (user) {
-    res.json({ success: true, message: "Login successful" });
+    res.json({ success: true, message: "Login successful", username: user.username });
 
   } else {
     res.status(401).json({ success: false, message: "Invalid credentials" });
@@ -23,7 +23,7 @@ router.post("/login", (req, res) => {
 });
 
 router.post("/register", (req, res) => {
-  const { email, password } = req.body;
+  const {username, email, password } = req.body;
   const userExists = fakeUserData.find((user) => user.email === email);
 
   if (userExists) {
@@ -32,7 +32,7 @@ router.post("/register", (req, res) => {
       .json({ success: false, message: "Email is already registered" });
   } else {
 
-    fakeUserData.push({ email, password });
+    fakeUserData.push({ username, email, password });
 
     res.json({ success: true, message: "Registration successful" });
   }
