@@ -6,7 +6,7 @@ const questionRoutes = require('./routes/questions');
 const tagRoutes = require('./routes/tags');
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 // Middleware for parsing JSON data
 app.use(bodyParser.json());
