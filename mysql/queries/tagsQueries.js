@@ -66,4 +66,16 @@ const updateTag = (tag, callback) => {
   });
 };
 
-module.exports = { getPopularTags, getMostUsedTags, addTag, updateTag };
+const deleteTag = (id, callback) => {
+  const query = "DELETE FROM tags WHERE id = ?";
+  pool.query(query, [id], (error, results) => {
+    if(error){
+      callback(error, null); // Pass error and null results to the callback
+    } else {
+      callback(null, results); // Pass null error and query results to the callback
+    }
+  });
+};
+
+
+module.exports = { getPopularTags, getMostUsedTags, addTag, updateTag, deleteTag };

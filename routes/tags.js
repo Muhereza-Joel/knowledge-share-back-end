@@ -74,4 +74,26 @@ router.post("/edit-tag", (req, res) => {
   }
 });
 
+router.post("/delete-tag", (req, res) => {
+  try {
+    const { id } = req.body;
+
+    tagQueries.deleteTag(id, (error, results) => {
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      } else {
+        // Check if any rows were affected by the delete operation
+        if (results && results.affectedRows > 0) {
+          res.json({ id: id });
+        } else {
+          res.status(404).json({ error: "Tag not found" });
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
 module.exports = router;

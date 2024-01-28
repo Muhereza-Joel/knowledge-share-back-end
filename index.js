@@ -15,7 +15,7 @@ app.use(cors());
 // Use the routes
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
-app.use('/api/tags', tagRoutes)
+app.use('/api/v1/tags', tagRoutes)
 
 // Start the server
 app.listen(port, () => {
