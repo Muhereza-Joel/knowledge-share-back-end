@@ -13,7 +13,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 // Use the routes
-app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/v1/tags', tagRoutes)
 
