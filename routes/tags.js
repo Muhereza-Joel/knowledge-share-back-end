@@ -16,6 +16,20 @@ router.get("/popular-tags", (req, res) => {
   }
 });
 
+router.get("/all", (req, res) => {
+  try {
+    const searchQuery = req.query.query || ''; // Default to an empty string if query is not provided
+    tagQueries.getAllTags(searchQuery, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 
 router.get("/most-used-tags", (req, res) => {
   try {

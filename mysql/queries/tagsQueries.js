@@ -2,6 +2,19 @@ const pool = require("../databaseConnection");
 const { v4: uuidv4 } = require("uuid");
 
 const getPopularTags = (searchQuery, callback) => {
+  pool.query("SELECT * FROM tags LIMIT 5", (error, results) => {
+    callback(error, results);
+  });
+};
+
+
+const getMostUsedTags = (callback) => {
+  pool.query("SELECT * FROM tags LIMIT 3", (error, results) => {
+    callback(error, results);
+  });
+};
+
+const getAllTags = (searchQuery, callback) => {
   let query = "SELECT * FROM tags";
   const queryParams = [];
 
@@ -11,13 +24,6 @@ const getPopularTags = (searchQuery, callback) => {
   }
 
   pool.query(query, queryParams, (error, results) => {
-    callback(error, results);
-  });
-};
-
-
-const getMostUsedTags = (callback) => {
-  pool.query("SELECT * FROM tags LIMIT 3", (error, results) => {
     callback(error, results);
   });
 };
@@ -78,4 +84,4 @@ const deleteTag = (id, callback) => {
 };
 
 
-module.exports = { getPopularTags, getMostUsedTags, addTag, updateTag, deleteTag };
+module.exports = { getPopularTags, getMostUsedTags, addTag, updateTag, deleteTag, getAllTags };
