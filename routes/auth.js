@@ -21,6 +21,8 @@ router.post("/login", (req, res) => {
         success: true,
         message: "Login successful",
         username: user.username,
+        id: user.id,
+        role:user.role
       });
     } else {
       // Invalid credentials

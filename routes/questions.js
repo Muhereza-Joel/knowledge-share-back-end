@@ -6,224 +6,6 @@ const router = express.Router();
 const { v4: uuidv4 } = require("uuid");
 const questionQueries = require("../mysql/queries/questionsQueries");
 
-const fakeQuestions = [
-  {
-    userId: "123",
-    username: "Muhereza-Joel",
-    questionId: uuidv4(),
-    questionTitle: "How to grow irish potatoes?",
-    descrption:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et magna ac ligula finibus dignissim. Curabitur volutpat ut dui nec sollicitudin. Donec sed arcu vitae nunc vestibulum malesuada. Phasellus magna turpis, laoreet pellentesque lectus at, euismod malesuada sapien. Aliquam sapien quam, porta ac dui id, imperdiet lobortis ex. Phasellus gravida tristique molestie. Curabitur malesuada lorem quis libero molestie convallis.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et magna ac ligula finibus dignissim. Curabitur volutpat ut dui nec sollicitudin. Donec sed arcu vitae nunc vestibulum malesuada. Phasellus magna turpis, laoreet pellentesque lectus at, euismod malesuada sapien. Aliquam sapien quam, porta ac dui id, imperdiet lobortis ex. Phasellus gravida tristique molestie. Curabitur malesuada lorem quis libero molestie convallisLorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et magna ac ligula finibus dignissim. Curabitur volutpat ut dui nec sollicitudin. Donec sed arcu vitae nunc vestibulum malesuada. Phasellus magna turpis, laoreet pellentesque lectus at, euismod malesuada sapien. Aliquam sapien quam, porta ac dui id, imperdiet lobortis ex. Phasellus gravida tristique molestie. Curabitur malesuada lorem quis libero molestie convallis",
-    tags: [
-      {
-        id: uuidv4(),
-        name: "gardening",
-      },
-      {
-        id: uuidv4(),
-        name: "tomatoes",
-      },
-      {
-        id: uuidv4(),
-        name: "roket",
-      },
-    ],
-
-    votes: 10,
-    answers: 3,
-    views: 50,
-  },
-
-  {
-    userId: "123",
-    username: "Muhereza-Joel",
-    questionId: uuidv4(),
-    questionTitle: "How to grow tomatoes?",
-    descrption:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque et magna ac ligula finibus dignissim. Curabitur volutpat ut dui nec sollicitudin. Donec sed arcu vitae nunc vestibulum malesuada. Phasellus magna turpis, laoreet pellentesque lectus at, euismod malesuada sapien. Aliquam sapien quam, porta ac dui id, imperdiet lobortis ex. Phasellus Donec sed arcu vitae nunc vestibulum malesuada. Phasellus magna turpis, laoreet pellentesque lectus at, euismod malesuada sapien. Aliquam sapien quam, porta ac dui id, imperdiet lobortis ex. Phasellus gravida tristique molestie. Curabitur malesuada lorem quis libero molestie convallis",
-    tags: [
-      {
-        id: uuidv4(),
-        name: "gardening",
-      },
-      {
-        id: uuidv4(),
-        name: "tomatoes",
-      },
-      {
-        id: uuidv4(),
-        name: "farming",
-      },
-      {
-        id: uuidv4(),
-        name: "roket",
-      },
-      {
-        id: uuidv4(),
-        name: "planting",
-      },
-    ],
-
-    votes: 10,
-    answers: 3,
-    views: 50,
-  },
-
-  {
-    userId: "123",
-    username: "Muhereza-Joel",
-    questionId: uuidv4(),
-    questionTitle: "How to use metrazine when weeding maize?",
-    tags: [
-      {
-        id: uuidv4(),
-        name: "gardening",
-      },
-
-      {
-        id: uuidv4(),
-        name: "planting",
-      },
-    ],
-
-    votes: 10,
-    answers: 3,
-    views: 50,
-  },
-
-  {
-    userId: "123",
-    username: "Muhereza-Joel",
-    questionId: uuidv4(),
-    questionTitle: "How to harvest tomatoes?",
-    tags: [
-      {
-        id: uuidv4(),
-        name: "gardening",
-      },
-      {
-        id: uuidv4(),
-        name: "tomatoes",
-      },
-      {
-        id: uuidv4(),
-        name: "farming",
-      },
-      {
-        id: uuidv4(),
-        name: "harvesting",
-      },
-    ],
-
-    votes: 10,
-    answers: 3,
-    views: 50,
-  },
-
-  {
-    userId: "123",
-    username: "Muhereza-Joel",
-    questionId: uuidv4(),
-    questionTitle: "How to harvest tomatoes?",
-    tags: [
-      {
-        id: uuidv4(),
-        name: "gardening",
-      },
-      {
-        id: uuidv4(),
-        name: "tomatoes",
-      },
-      {
-        id: uuidv4(),
-        name: "farming",
-      },
-      {
-        id: uuidv4(),
-        name: "harvesting",
-      },
-    ],
-
-    votes: 10,
-    answers: 3,
-    views: 50,
-  },
-
-  {
-    userId: "123",
-    username: "Muhereza-Joel",
-    questionId: uuidv4(),
-    questionTitle: "How to harvest tomatoes?",
-    tags: [
-      {
-        id: uuidv4(),
-        name: "gardening",
-      },
-      {
-        id: uuidv4(),
-        name: "tomatoes",
-      },
-      {
-        id: uuidv4(),
-        name: "farming",
-      },
-      {
-        id: uuidv4(),
-        name: "harvesting",
-      },
-    ],
-
-    votes: 10,
-    answers: 3,
-    views: 50,
-  },
-
-  {
-    userId: "123",
-    username: "Muhereza-Joel",
-    questionId: uuidv4(),
-    questionTitle: "How to harvest tomatoes?",
-    tags: [
-      {
-        id: uuidv4(),
-        name: "gardening",
-      },
-      {
-        id: uuidv4(),
-        name: "tomatoes",
-      },
-      {
-        id: uuidv4(),
-        name: "farming",
-      },
-      {
-        id: uuidv4(),
-        name: "harvesting",
-      },
-    ],
-
-    votes: 10,
-    answers: 3,
-    views: 50,
-  },
-];
-
-router.get("/all/:userId", (req, res) => {
-  const { userId } = req.params;
-  const userQuestions = fakeQuestions.filter(
-    (question) => question.userId === userId
-  );
-
-  try {
-    setTimeout(() => {
-      res.json(userQuestions);
-    }, 100); // delay
-  } catch (error) {
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-
 router.post("/question", async (req, res) => {
   const { questionId } = req.body;
   questionQueries.getQuestionDetails(questionId, (error, formattedQuestion) => {
@@ -239,7 +21,7 @@ router.post("/question", async (req, res) => {
       res.json(formattedQuestion);
     }, 100); // delay
   });
-})
+});
 
 router.get("/all", (req, res) => {
   questionQueries.getAllQuestions((error, allQuestions) => {
@@ -270,6 +52,36 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+router.post("/add-answer", upload.none(), (req, res) => {
+  try {
+    const answerId = uuidv4();
+    const questionId = req.body.questionId;
+    const answer = req.body.answer;
+    const userId = req.body.userId;
+
+    questionQueries.saveAnswer(
+      answerId,
+      questionId,
+      answer,
+      userId,
+      (error, result) => {
+        if (error) {
+          console.error("Error saving question information:", error);
+          res.status(500).json({ message: "Internal Server Error" });
+        } else {
+          res
+            .status(200)
+            .json({ message: "Answer submitted successfully!" });
+        }
+      }
+    );
+  } catch (error) {
+    console.error("Error processing the request:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
 router.post("/add", upload.array("images", 5), (req, res) => {
   try {
     // Process the uploaded images
@@ -281,7 +93,7 @@ router.post("/add", upload.array("images", 5), (req, res) => {
     const questionId = uuidv4();
     const title = req.body.questionTitle;
     const description = req.body.description;
-    const userId = "0327359e-919f-46bb-ad9b-2830f21a643d";
+    const userId = req.body.userId;
 
     questionQueries.saveQuestion(
       questionId,

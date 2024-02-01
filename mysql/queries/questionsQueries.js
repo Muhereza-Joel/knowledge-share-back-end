@@ -17,6 +17,22 @@ const saveQuestion = (questionId, title, description, userId, callback) => {
   });
 };
 
+const saveAnswer = (id, questionId, answer, userId, callback) => {
+  const query = `INSERT INTO question_answers (id, question_id, answer, user_id) 
+  VALUES (?, ?, ?, ?);
+  `;
+
+  const values = [id, questionId, answer, userId];
+
+  pool.query(query, values, (error, result) => {
+    if (error) {
+      return callback(error, null);
+    }
+
+    callback(null, null);
+  });
+};
+
 const saveImage = (questionId, url, destination, file, callback) => {
   const { mimetype, filename, size } = file;
 
@@ -63,7 +79,7 @@ const saveQuestionTags = (questionId, tags, callback) => {
 };
 
 const getAllQuestions = (callback) => {
-    const allQuestionsQuery = `
+  const allQuestionsQuery = `
       SELECT
         q.id,
         q.title,
@@ -71,25 +87,26 @@ const getAllQuestions = (callback) => {
         q.user_id,
         q.created_at,
         q.updated_at,
-        u.username
+        u.username,
+        (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
       FROM
         questions q
       JOIN
         users u ON q.user_id = u.id
     `;
-  
-    pool.query(allQuestionsQuery, (error, questionsResult) => {
-      if (error) {
-        console.error("Error executing questions query:", error);
-        return callback(error, null);
-      }
-  
-      const allQuestions = [];
-      let processedCount = 0;
-  
-      // Loop through each question
-      for (const question of questionsResult) {
-        const tagsQuery = `
+
+  pool.query(allQuestionsQuery, (error, questionsResult) => {
+    if (error) {
+      console.error("Error executing questions query:", error);
+      return callback(error, null);
+    }
+
+    const allQuestions = [];
+    let processedCount = 0;
+
+    // Loop through each question
+    for (const question of questionsResult) {
+      const tagsQuery = `
           SELECT
             t.id, t.name
           FROM
@@ -99,18 +116,18 @@ const getAllQuestions = (callback) => {
           WHERE
             qtm.question_id = ?
         `;
-  
-        pool.query(tagsQuery, [question.id], (tagsError, tagsResult) => {
-          if (tagsError) {
-            console.error("Error executing tags query:", tagsError);
-            return callback(tagsError, null);
-          }
-  
-          const tags = Array.isArray(tagsResult)
-            ? tagsResult.map((tag) => ({ id: tag.id, name: tag.name }))
-            : [];
-  
-          const imagesQuery = `
+
+      pool.query(tagsQuery, [question.id], (tagsError, tagsResult) => {
+        if (tagsError) {
+          console.error("Error executing tags query:", tagsError);
+          return callback(tagsError, null);
+        }
+
+        const tags = Array.isArray(tagsResult)
+          ? tagsResult.map((tag) => ({ id: tag.id, name: tag.name }))
+          : [];
+
+        const imagesQuery = `
             SELECT
               url, size
             FROM
@@ -118,44 +135,47 @@ const getAllQuestions = (callback) => {
             WHERE
               question_id = ?
           `;
-  
-          pool.query(imagesQuery, [question.id], (imagesError, imagesResult) => {
-            if (imagesError) {
-              console.error("Error executing images query:", imagesError);
-              return callback(imagesError, null);
-            }
-  
-            const urls = Array.isArray(imagesResult)
-              ? imagesResult.map((image) => ({ url: image.url, size: image.size }))
-              : [];
-  
-            const formattedQuestion = {
-              questionId: question.id,
-              questionTitle: question.title,
-              description: question.description,
-              userId: question.user_id,
-              username: question.username,
-              created_at: question.created_at,
-              updated_at: question.updated_at,
-              tags: tags,
-              images: urls,
-              votes: 0,
-              answers: 0,
-              views: 0,
-            };
-  
-            allQuestions.push(formattedQuestion);
-  
-            // Check if all questions have been processed
-            processedCount++;
-            if (processedCount === questionsResult.length) {
-              return callback(null, allQuestions);
-            }
-          });
+
+        pool.query(imagesQuery, [question.id], (imagesError, imagesResult) => {
+          if (imagesError) {
+            console.error("Error executing images query:", imagesError);
+            return callback(imagesError, null);
+          }
+
+          const urls = Array.isArray(imagesResult)
+            ? imagesResult.map((image) => ({
+                url: image.url,
+                size: image.size,
+              }))
+            : [];
+
+          const formattedQuestion = {
+            questionId: question.id,
+            questionTitle: question.title,
+            description: question.description,
+            userId: question.user_id,
+            username: question.username,
+            created_at: question.created_at,
+            updated_at: question.updated_at,
+            tags: tags,
+            images: urls,
+            votes: 0,
+            answers: question.answer_count, // use the answer_count from the main query
+            views: 0,
+          };
+
+          allQuestions.push(formattedQuestion);
+
+          // Check if all questions have been processed
+          processedCount++;
+          if (processedCount === questionsResult.length) {
+            return callback(null, allQuestions);
+          }
         });
-      }
-    });
-  };
+      });
+    }
+  });
+};
 
 const getQuestionDetails = async (questionId, callback) => {
   const questionQuery = `
@@ -209,7 +229,7 @@ const getQuestionDetails = async (questionId, callback) => {
 
       const imagesQuery = `
           SELECT
-            url,size
+            url, size
           FROM
             question_images
           WHERE
@@ -227,22 +247,53 @@ const getQuestionDetails = async (questionId, callback) => {
           size: image.size,
         }));
 
-        const formattedQuestion = {
-          questionId: question.id,
-          questionTitle: question.title,
-          description: question.description,
-          userId: question.user_id,
-          username: question.username,
-          created_at: question.created_at,
-          updated_at: question.updated_at,
-          tags: tags,
-          images: urls,
-          votes: 0,
-          answers: 0,
-          views: 0,
-        };
+        const answersQuery = `
+        SELECT
+        qa.id, question_id, answer, user_id, users.username, qa.created_at, qa.updated_at
+      FROM
+        question_answers qa
+        INNER JOIN users ON qa.user_id = users.id
+      WHERE
+        question_id = ?
+        `;
 
-        return callback(null, formattedQuestion);
+        pool.query(
+          answersQuery,
+          [questionId],
+          (answersError, answersResult) => {
+            if (answersError) {
+              console.error("Error executing answers query:", answersError);
+              return callback(answersError, null);
+            }
+
+            const answers = answersResult.map((answer) => ({
+              answerId: answer.id,
+              questionId: answer.question_id,
+              answerContent: answer.answer,
+              userId: answer.user_id,
+              username: answer.username,
+              created_at: answer.created_at,
+              updated_at: answer.updated_at,
+            }));
+
+            const formattedQuestion = {
+              questionId: question.id,
+              questionTitle: question.title,
+              description: question.description,
+              userId: question.user_id,
+              username: question.username,
+              created_at: question.created_at,
+              updated_at: question.updated_at,
+              tags: tags,
+              images: urls,
+              votes: 0, // Add logic to calculate votes, answers, and views if needed
+              answers: answers,
+              views: 0,
+            };
+
+            return callback(null, formattedQuestion);
+          }
+        );
       });
     });
   });
@@ -254,4 +305,5 @@ module.exports = {
   saveQuestion,
   getQuestionDetails,
   getAllQuestions,
+  saveAnswer,
 };
