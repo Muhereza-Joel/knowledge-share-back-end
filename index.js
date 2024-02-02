@@ -5,6 +5,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const questionRoutes = require('./routes/questions');
 const tagRoutes = require('./routes/tags');
+const eventRoutes = require('./routes/event');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -17,7 +18,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Use the routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/questions', questionRoutes);
-app.use('/api/v1/tags', tagRoutes)
+app.use('/api/v1/tags', tagRoutes);
+app.use('/api/v1/events', eventRoutes);
 
 // Start the server
 app.listen(port, () => {
