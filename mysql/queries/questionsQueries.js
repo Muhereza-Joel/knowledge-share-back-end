@@ -80,20 +80,23 @@ const saveQuestionTags = (questionId, tags, callback) => {
 
 const getAllQuestions = (callback) => {
   const allQuestionsQuery = `
-      SELECT
-        q.id,
-        q.title,
-        q.description,
-        q.user_id,
-        q.created_at,
-        q.updated_at,
-        u.username,
-        (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
-      FROM
-        questions q
-      JOIN
-        users u ON q.user_id = u.id
-    `;
+    SELECT
+      q.id,
+      q.title,
+      q.description,
+      q.user_id,
+      q.created_at,
+      q.updated_at,
+      u.username,
+      pi.url as avatar_url,  -- Include avatar URL
+      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
+    FROM
+      questions q
+    JOIN
+      users u ON q.user_id = u.id
+    LEFT JOIN
+      profile_images pi ON q.user_id = pi.user_id  -- Join profile_images table
+  `;
 
   pool.query(allQuestionsQuery, (error, questionsResult) => {
     if (error) {
@@ -107,15 +110,15 @@ const getAllQuestions = (callback) => {
     // Loop through each question
     for (const question of questionsResult) {
       const tagsQuery = `
-          SELECT
-            t.id, t.name
-          FROM
-            tags t
-          JOIN
-            question_tag_mapping qtm ON t.id = qtm.tag_id
-          WHERE
-            qtm.question_id = ?
-        `;
+        SELECT
+          t.id, t.name
+        FROM
+          tags t
+        JOIN
+          question_tag_mapping qtm ON t.id = qtm.tag_id
+        WHERE
+          qtm.question_id = ?
+      `;
 
       pool.query(tagsQuery, [question.id], (tagsError, tagsResult) => {
         if (tagsError) {
@@ -128,13 +131,13 @@ const getAllQuestions = (callback) => {
           : [];
 
         const imagesQuery = `
-            SELECT
-              url, size
-            FROM
-              question_images
-            WHERE
-              question_id = ?
-          `;
+          SELECT
+            url, size
+          FROM
+            question_images
+          WHERE
+            question_id = ?
+        `;
 
         pool.query(imagesQuery, [question.id], (imagesError, imagesResult) => {
           if (imagesError) {
@@ -155,12 +158,13 @@ const getAllQuestions = (callback) => {
             description: question.description,
             userId: question.user_id,
             username: question.username,
+            avatarUrl: question.avatar_url,  // Include avatar URL
             created_at: question.created_at,
             updated_at: question.updated_at,
             tags: tags,
             images: urls,
             votes: 0,
-            answers: question.answer_count, // use the answer_count from the main query
+            answers: question.answer_count,
             views: 0,
           };
 
@@ -177,23 +181,27 @@ const getAllQuestions = (callback) => {
   });
 };
 
+
 const getQuestionDetails = async (questionId, callback) => {
   const questionQuery = `
-      SELECT
-        q.id,
-        q.title,
-        q.description,
-        q.user_id,
-        q.created_at,
-        q.updated_at,
-        u.username
-      FROM
-        questions q
-      JOIN
-        users u ON q.user_id = u.id
-      WHERE
-        q.id = ?
-    `;
+    SELECT
+      q.id,
+      q.title,
+      q.description,
+      q.user_id as question_user_id,
+      q.created_at,
+      q.updated_at,
+      u.username,
+      pi.url as avatarUrl  -- Include avatar URL
+    FROM
+      questions q
+    JOIN
+      users u ON q.user_id = u.id
+    LEFT JOIN
+      profile_images pi ON q.user_id = pi.user_id  -- Join profile_images table  
+    WHERE
+      q.id = ?
+  `;
 
   pool.query(questionQuery, [questionId], async (error, questionResult) => {
     if (error) {
@@ -209,15 +217,15 @@ const getQuestionDetails = async (questionId, callback) => {
     const question = questionResult[0];
 
     const tagsQuery = `
-        SELECT
-          t.id, t.name
-        FROM
-          tags t
-        JOIN
-          question_tag_mapping qtm ON t.id = qtm.tag_id
-        WHERE
-          qtm.question_id = ?
-      `;
+      SELECT
+        t.id, t.name
+      FROM
+        tags t
+      JOIN
+        question_tag_mapping qtm ON t.id = qtm.tag_id
+      WHERE
+        qtm.question_id = ?
+    `;
 
     pool.query(tagsQuery, [questionId], (tagsError, tagsResult) => {
       if (tagsError) {
@@ -228,13 +236,13 @@ const getQuestionDetails = async (questionId, callback) => {
       const tags = tagsResult.map((tag) => ({ id: tag.id, name: tag.name }));
 
       const imagesQuery = `
-          SELECT
-            url, size
-          FROM
-            question_images
-          WHERE
-            question_id = ?
-        `;
+        SELECT
+          url, size
+        FROM
+          question_images
+        WHERE
+          question_id = ?
+      `;
 
       pool.query(imagesQuery, [questionId], (imagesError, imagesResult) => {
         if (imagesError) {
@@ -248,13 +256,21 @@ const getQuestionDetails = async (questionId, callback) => {
         }));
 
         const answersQuery = `
-        SELECT
-        qa.id, question_id, answer, user_id, users.username, qa.created_at, qa.updated_at
-      FROM
-        question_answers qa
-        INNER JOIN users ON qa.user_id = users.id
-      WHERE
-        question_id = ?
+          SELECT
+            qa.id,
+            question_id,
+            answer,
+            qa.user_id as answer_user_id,
+            users.username,
+            pi.url as avatarUrl, -- Include avatar URL for answers
+            qa.created_at,
+            qa.updated_at
+          FROM
+            question_answers qa
+            INNER JOIN users ON qa.user_id = users.id
+            LEFT JOIN profile_images pi ON qa.user_id = pi.user_id -- Join profile_images table for answers
+          WHERE
+            question_id = ?
         `;
 
         pool.query(
@@ -270,8 +286,9 @@ const getQuestionDetails = async (questionId, callback) => {
               answerId: answer.id,
               questionId: answer.question_id,
               answerContent: answer.answer,
-              userId: answer.user_id,
+              userId: answer.answer_user_id, // Use the alias for clarity
               username: answer.username,
+              avatarUrl: answer.avatarUrl, // Include avatar URL for answers
               created_at: answer.created_at,
               updated_at: answer.updated_at,
             }));
@@ -280,8 +297,9 @@ const getQuestionDetails = async (questionId, callback) => {
               questionId: question.id,
               questionTitle: question.title,
               description: question.description,
-              userId: question.user_id,
+              userId: question.question_user_id, // Use the alias for clarity
               username: question.username,
+              avatarUrl: question.avatarUrl, // Include avatar URL
               created_at: question.created_at,
               updated_at: question.updated_at,
               tags: tags,
@@ -298,6 +316,9 @@ const getQuestionDetails = async (questionId, callback) => {
     });
   });
 };
+
+
+
 
 module.exports = {
   saveImage,

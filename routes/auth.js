@@ -1,6 +1,55 @@
 const express = require("express");
-const { registerUser, getAllUsers, loginUser } = require("../mysql/queries/authQueries");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+const { registerUser, getAllUsers, loginUser, saveProfilePhoto, getProfilePhoto } = require("../mysql/queries/authQueries");
 const router = express.Router();
+const { v4: uuidv4 } = require("uuid");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = "uploads/images"; // Specify your upload directory
+    fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+
+  filename: (req, file, cb) => {
+    cb(null, uuidv4() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
+
+router.post("/change-avator", upload.single("avatar"), (req, res) => {
+  try {
+    const baseUrl = "http://localhost:3001/uploads/images/";
+    const imageUrl = baseUrl + req.file.filename;
+
+    const userId = req.body.userId;
+    saveProfilePhoto(imageUrl,userId, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.get("/get-avator/:userId", (req, res) => {
+  try {
+    const { userId } = req.params;
+    getProfilePhoto(userId, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+})
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
