@@ -167,10 +167,171 @@ const getProfilePhoto = (userId, callback) => {
   });
 };
 
+
+const addProfile = (userData, profileData, callback) => {
+  pool.getConnection((err, connection) => {
+    if (err) {
+      callback(err, null);
+      return;
+    }
+
+    connection.beginTransaction((beginErr) => {
+      if (beginErr) {
+        connection.release();
+        callback(beginErr, null);
+        return;
+      }
+
+      // Check if the new username is already taken
+      connection.query(
+        'SELECT id FROM users WHERE username = ? AND id <> ?',
+        [userData.username, userData.userId],
+        (checkUsernameErr, existingUser) => {
+          if (checkUsernameErr) {
+            return connection.rollback(() => {
+              connection.release();
+              callback(checkUsernameErr, null);
+            });
+          }
+
+          if (existingUser.length > 0) {
+            return connection.rollback(() => {
+              connection.release();
+              return callback('Username is already taken', null);
+            });
+          }
+
+          // Check if the new email is already taken
+          connection.query(
+            'SELECT id FROM users WHERE email = ? AND id <> ?',
+            [userData.email, userData.userId],
+            (checkEmailErr, existingEmail) => {
+              if (checkEmailErr) {
+                return connection.rollback(() => {
+                  connection.release();
+                  callback(checkEmailErr, null);
+                });
+              }
+
+              if (existingEmail.length > 0) {
+                return connection.rollback(() => {
+                  connection.release();
+                  callback('Email is already taken', null);
+                });
+              }
+
+              // Proceed with the update or insert
+              connection.query(
+                'UPDATE users SET email = ?, username = ? WHERE id = ?',
+                [userData.email, userData.username, userData.userId],
+                (updateUsersErr) => {
+                  if (updateUsersErr) {
+                    return connection.rollback(() => {
+                      connection.release();
+                      callback(updateUsersErr, null);
+                    });
+                  }
+
+                  connection.query(
+                    'SELECT * FROM profiles WHERE user_id = ?',
+                    [userData.userId],
+                    (selectProfileErr, existingProfile) => {
+                      if (selectProfileErr) {
+                        return connection.rollback(() => {
+                          connection.release();
+                          callback(selectProfileErr, null);
+                        });
+                      }
+
+                      if (existingProfile.length > 0) {
+                        connection.query(
+                          'UPDATE profiles SET fullname = ?, dob = ?, gender = ?, country = ?, city = ?, phone_number = ?, username = ? WHERE user_id = ?',
+                          [
+                            profileData.fullname,
+                            profileData.dob,
+                            profileData.gender,
+                            profileData.country,
+                            profileData.city,
+                            profileData.phone_number,
+                            userData.username,
+                            userData.userId,
+                          ],
+                          (updateProfileErr) => {
+                            if (updateProfileErr) {
+                              return connection.rollback(() => {
+                                connection.release();
+                                callback(updateProfileErr, null);
+                              });
+                            }
+
+                            connection.commit((commitErr) => {
+                              if (commitErr) {
+                                return connection.rollback(() => {
+                                  connection.release();
+                                  callback(commitErr, null);
+                                });
+                              }
+
+                              connection.release();
+                              callback(null, 'Tables updated successfully');
+                            });
+                          }
+                        );
+                      } else {
+                        connection.query(
+                          'INSERT INTO profiles (id, username, fullname, dob, gender, country, city, phone_number, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                          [
+                            uuidv4(),
+                            userData.username,
+                            profileData.fullname,
+                            profileData.dob,
+                            profileData.gender,
+                            profileData.country,
+                            profileData.city,
+                            profileData.phone_number,
+                            userData.userId,
+                          ],
+                          (insertProfileErr) => {
+                            if (insertProfileErr) {
+                              return connection.rollback(() => {
+                                connection.release();
+                                callback(insertProfileErr, null);
+                              });
+                            }
+
+                            connection.commit((commitErr) => {
+                              if (commitErr) {
+                                return connection.rollback(() => {
+                                  connection.release();
+                                  callback(commitErr, null);
+                                });
+                              }
+
+                              connection.release();
+                              callback(null, 'Tables updated successfully');
+                            });
+                          }
+                        );
+                      }
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
+};
+
+
+
 module.exports = {
   registerUser,
   getAllUsers,
   loginUser,
   saveProfilePhoto,
   getProfilePhoto,
+  addProfile
 };

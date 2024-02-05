@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-const { registerUser, getAllUsers, loginUser, saveProfilePhoto, getProfilePhoto } = require("../mysql/queries/authQueries");
+const { registerUser, getAllUsers, addProfile, loginUser, saveProfilePhoto, getProfilePhoto } = require("../mysql/queries/authQueries");
 const router = express.Router();
 const { v4: uuidv4 } = require("uuid");
 
@@ -51,14 +51,43 @@ router.get("/get-avator/:userId", (req, res) => {
   }
 })
 
+router.put("/profile", (req, res) => {
+  try {
+    const username = req.body.username
+    const formattedUsername = username.toLowerCase().replace(/\s+/g, "-");
+    const userData = {
+      userId: req.body.userId,
+      username: formattedUsername,
+      email: req.body.email,
+    };
+    
+    const profileData = {
+      fullname: req.body.fullname,
+      dob: req.body.dateOfBirth,
+      gender: req.body.gender,
+      country: req.body.homeCountry,
+      city: req.body.city,
+      phone_number: req.body.phoneNumber,
+    };
+
+    addProfile(userData, profileData, (err, result) => {
+      if (err) {
+        res.status(500).json({message: err});
+      } else {
+        res.status(200).json({message: result});
+      }
+  })
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+})
+
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
   // Call the loginUser function
   loginUser(email, password, (error, user) => {
     if (error) {
-      // Handle login error
-      console.error("Login error:", error);
       return res
         .status(500)
         .json({ success: false, message: "Internal Server Error" });
@@ -109,8 +138,6 @@ router.post("/register", (req, res) => {
     { username: formattedUsername, email, password },
     (error, user) => {
       if (error) {
-        // Handle registration error
-        console.error("Registration error:", error);
         return res.status(500).json({ error: error.message });
       }
 
