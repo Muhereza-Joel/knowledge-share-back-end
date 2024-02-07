@@ -2,7 +2,15 @@ const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-const { registerUser, getAllUsers, addProfile, loginUser, saveProfilePhoto, getProfilePhoto } = require("../mysql/queries/authQueries");
+const {
+  registerUser,
+  getAllUsers,
+  getUserProfile,
+  addProfile,
+  loginUser,
+  saveProfilePhoto,
+  getProfilePhoto,
+} = require("../mysql/queries/authQueries");
 const router = express.Router();
 const { v4: uuidv4 } = require("uuid");
 
@@ -26,7 +34,7 @@ router.post("/change-avator", upload.single("avatar"), (req, res) => {
     const imageUrl = baseUrl + req.file.filename;
 
     const userId = req.body.userId;
-    saveProfilePhoto(imageUrl,userId, (error, results) => {
+    saveProfilePhoto(imageUrl, userId, (error, results) => {
       if (error) {
         throw error;
       }
@@ -49,18 +57,32 @@ router.get("/get-avator/:userId", (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
+
+router.get("/profile/:userId", (req, res) => {
+  try {
+    const { userId } = req.params;
+    getUserProfile(userId, (error, results) => {
+      if (error) {
+        throw error;
+      }
+      res.json(results);
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 router.put("/profile", (req, res) => {
   try {
-    const username = req.body.username
+    const username = req.body.username;
     const formattedUsername = username.toLowerCase().replace(/\s+/g, "-");
     const userData = {
       userId: req.body.userId,
       username: formattedUsername,
       email: req.body.email,
     };
-    
+
     const profileData = {
       fullname: req.body.fullname,
       dob: req.body.dateOfBirth,
@@ -72,15 +94,15 @@ router.put("/profile", (req, res) => {
 
     addProfile(userData, profileData, (err, result) => {
       if (err) {
-        res.status(500).json({message: err});
+        res.status(500).json({ message: err });
       } else {
-        res.status(200).json({message: result});
+        res.status(200).json({ message: result });
       }
-  })
+    });
   } catch (error) {
     res.status(500).json({ error: "Internal Server Error" });
   }
-})
+});
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
@@ -100,7 +122,7 @@ router.post("/login", (req, res) => {
         message: "Login successful",
         username: user.username,
         id: user.id,
-        role:user.role
+        role: user.role,
       });
     } else {
       // Invalid credentials
