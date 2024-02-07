@@ -10,6 +10,7 @@ const commentRoutes = require('./routes/comments');
 
 const app = express();
 const port = process.env.PORT || 3001;
+const host = '0.0.0.0';
 
 // Middleware for parsing JSON data
 app.use(bodyParser.json());
@@ -24,6 +25,6 @@ app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/comments', commentRoutes);
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(port, host, () => {
+  console.log(`Server is running on http://${HOST}:${PORT}`);
 });
