@@ -26,5 +26,5 @@ app.use('/api/v1/comments', commentRoutes);
 
 // Start the server
 app.listen(port, host, () => {
-  console.log(`Server is running on http://${HOST}:${PORT}`);
+  console.log(`Server is running on http://${host}:${port}`);
 });
