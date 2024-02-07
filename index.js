@@ -9,7 +9,7 @@ const eventRoutes = require('./routes/event');
 const commentRoutes = require('./routes/comments');
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 80;
 const host = '0.0.0.0';
 
 // Middleware for parsing JSON data
