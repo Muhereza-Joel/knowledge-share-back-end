@@ -10,7 +10,7 @@ const commentRoutes = require('./routes/comments');
 
 const app = express();
 const port = process.env.PORT || 3001;
-const host = '0.0.0.0';
+const host = 'localhost';
 
 // Middleware for parsing JSON data
 app.use(bodyParser.json());
