@@ -192,6 +192,7 @@ const getQuestionDetails = async (questionId, callback) => {
       q.created_at,
       q.updated_at,
       u.username,
+      u.role,
       pi.url as avatarUrl  -- Include avatar URL
     FROM
       questions q
@@ -263,6 +264,7 @@ const getQuestionDetails = async (questionId, callback) => {
             qa.user_id as answer_user_id,
             users.username,
             pi.url as avatarUrl, -- Include avatar URL for answers
+            users.role,
             qa.created_at,
             qa.updated_at
           FROM
@@ -288,6 +290,7 @@ const getQuestionDetails = async (questionId, callback) => {
               answerContent: answer.answer,
               userId: answer.answer_user_id, // Use the alias for clarity
               username: answer.username,
+              role: answer.role,
               avatarUrl: answer.avatarUrl, // Include avatar URL for answers
               created_at: answer.created_at,
               updated_at: answer.updated_at,
