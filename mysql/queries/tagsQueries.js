@@ -7,7 +7,6 @@ const getPopularTags = (searchQuery, callback) => {
   });
 };
 
-
 const getMostUsedTags = (callback) => {
   pool.query("SELECT * FROM tags LIMIT 3", (error, results) => {
     callback(error, results);
@@ -50,6 +49,15 @@ const addTag = (tag, callback) => {
   });
 };
 
+const getTagDetails = (tagId, callback) => {
+  const query = "SELECT * FROM tags WHERE id = ?";
+  const values = [tagId];
+
+  pool.query(query, values, (error, results) => {
+    callback(error, results[0]);
+  });
+};
+
 const updateTag = (tag, callback) => {
   const { id } = tag;
 
@@ -75,7 +83,7 @@ const updateTag = (tag, callback) => {
 const deleteTag = (id, callback) => {
   const query = "DELETE FROM tags WHERE id = ?";
   pool.query(query, [id], (error, results) => {
-    if(error){
+    if (error) {
       callback(error, null); // Pass error and null results to the callback
     } else {
       callback(null, results); // Pass null error and query results to the callback
@@ -83,5 +91,12 @@ const deleteTag = (id, callback) => {
   });
 };
 
-
-module.exports = { getPopularTags, getMostUsedTags, addTag, updateTag, deleteTag, getAllTags };
+module.exports = {
+  getPopularTags,
+  getMostUsedTags,
+  addTag,
+  updateTag,
+  deleteTag,
+  getAllTags,
+  getTagDetails
+};

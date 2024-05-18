@@ -30,6 +30,21 @@ router.get("/all", (req, res) => {
   }
 });
 
+router.get("/all/:tagId", (req, res) => {
+  const tagId = req.params.tagId;
+
+  tagQueries.getTagDetails(tagId, (error, result) => {
+    if (error) {
+      console.error("Error getting tag details:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    res.json(result);
+  });
+});
+
+
+
 
 router.get("/most-used-tags", (req, res) => {
   try {

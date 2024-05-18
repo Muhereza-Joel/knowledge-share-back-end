@@ -37,6 +37,52 @@ router.get("/all", (req, res) => {
   });
 });
 
+router.get("/recent", (req, res) => {
+  questionQueries.getRecentQuestions((error, allQuestions) => {
+    if (error) {
+      console.error("Error getting all questions:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    // Add any additional processing or formatting if needed
+    // For example, you might want to filter, sort, or paginate the questions
+
+    res.json(allQuestions);
+  });
+});
+
+router.get("/all/user/:userId", (req, res) => {
+  const userId = req.params.userId;
+  questionQueries.getUserQuestions(userId, (error, allQuestions) => {
+    if (error) {
+      console.error("Error getting all questions:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    // Add any additional processing or formatting if needed
+    // For example, you might want to filter, sort, or paginate the questions
+
+    res.json(allQuestions);
+  });
+});
+
+router.get("/tagged/:tagId", (req, res) => {
+  const tagId = req.params.tagId;  // Extract tagId from query parameters
+
+  questionQueries.getAllQuestionsTagged((error, allQuestions) => {
+    if (error) {
+      console.error("Error getting all questions:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+
+    // Add any additional processing or formatting if needed
+    // For example, you might want to filter, sort, or paginate the questions
+
+    res.json(allQuestions);
+  }, tagId);  // Pass the tagId as the second parameter
+});
+
+
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
