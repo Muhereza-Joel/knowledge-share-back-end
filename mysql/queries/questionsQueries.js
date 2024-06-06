@@ -650,6 +650,17 @@ const getUserQuestions = async (userId, callback) => {
   });
 };
 
+const deleteQuestion = async (questionId, callback) => {
+  const query = `DELETE FROM questions WHERE id = ?`;
+
+  pool.query(query, [questionId], (error, result) => {
+    if (error) {
+      return callback(error, null);
+    } else {
+      callback(null, questionId);
+    }
+  });
+};
 
 module.exports = {
   saveImage,
@@ -660,5 +671,6 @@ module.exports = {
   saveAnswer,
   getAllQuestionsTagged,
   getRecentQuestions,
-  getUserQuestions
+  getUserQuestions,
+  deleteQuestion,
 };

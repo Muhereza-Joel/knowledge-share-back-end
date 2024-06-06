@@ -67,7 +67,7 @@ router.get("/all/user/:userId", (req, res) => {
 });
 
 router.get("/tagged/:tagId", (req, res) => {
-  const tagId = req.params.tagId;  // Extract tagId from query parameters
+  const tagId = req.params.tagId; // Extract tagId from query parameters
 
   questionQueries.getAllQuestionsTagged((error, allQuestions) => {
     if (error) {
@@ -79,10 +79,24 @@ router.get("/tagged/:tagId", (req, res) => {
     // For example, you might want to filter, sort, or paginate the questions
 
     res.json(allQuestions);
-  }, tagId);  // Pass the tagId as the second parameter
+  }, tagId); // Pass the tagId as the second parameter
 });
 
+router.delete("/delete/:questionId", (req, res) => {
+    const questionId = req.params.questionId;
 
+    questionQueries.deleteQuestion(
+      questionId,
+      (error, result) => {
+        if (error) {
+          console.error("Error deleting question:", error);
+          return res.status(500).json({ error: "Internal Server Error" });
+        }
+
+        res.json(result);
+      },
+    ); // Pass the tagId as the second parameter
+  });
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -115,9 +129,7 @@ router.post("/add-answer", upload.none(), (req, res) => {
           console.error("Error saving question information:", error);
           res.status(500).json({ message: "Internal Server Error" });
         } else {
-          res
-            .status(200)
-            .json({ message: "Answer submitted successfully!" });
+          res.status(200).json({ message: "Answer submitted successfully!" });
         }
       }
     );
@@ -126,7 +138,6 @@ router.post("/add-answer", upload.none(), (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 });
-
 
 router.post("/add", upload.array("images", 5), (req, res) => {
   try {
