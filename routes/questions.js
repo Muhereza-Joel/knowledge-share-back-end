@@ -73,14 +73,38 @@ router.get("/tagged/:tagId", (req, res) => {
     if (error) {
       console.error("Error getting all questions:", error);
       return res.status(500).json({ error: "Internal Server Error" });
-    }
-
-    // Add any additional processing or formatting if needed
-    // For example, you might want to filter, sort, or paginate the questions
+    }s
 
     res.json(allQuestions);
-  }, tagId); // Pass the tagId as the second parameter
+  }, tagId); 
 });
+
+router.put("/notifications/mark-seen/", (req, res) => {
+  const notificationId = req.body.notificationId; 
+  const userId = req.body.userId; 
+
+  questionQueries.markNotificationAsSeen(notificationId, userId, (error, notificationId) => {
+    if (error) {
+      console.error("Error marking notification as seen:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+    res.json(notificationId);
+  }); 
+})
+
+router.get("/notifications/:userId", (req, res) => {
+  const userId = req.params.userId; 
+
+  questionQueries.getNotificationsWithUrls(userId,(error, allNotifications) => {
+    if (error) {
+      console.error("Error getting all notifications:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
+    res.json(allNotifications);
+  }); 
+});
+
+
 
 router.delete("/delete/:questionId", (req, res) => {
     const questionId = req.params.questionId;

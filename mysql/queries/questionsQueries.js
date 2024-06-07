@@ -1,10 +1,11 @@
 const pool = require("../databaseConnection");
+const { v4: uuidv4 } = require("uuid");
 
 const saveQuestion = (questionId, title, description, userId, callback) => {
   const query = `
-      INSERT INTO questions (id, title, description, user_id)
-      VALUES (?, ?, ?, ?);
-    `;
+    INSERT INTO questions (id, title, description, user_id)
+    VALUES (?, ?, ?, ?);
+  `;
 
   const values = [questionId, title, description, userId];
 
@@ -13,7 +14,67 @@ const saveQuestion = (questionId, title, description, userId, callback) => {
       return callback(error, null);
     }
 
-    callback(null, null);
+    // Call getAllUserIdsExceptCurrent to get user ids
+    getAllUserIdsExceptCurrent(userId, (userIdsError, userIds) => {
+      if (userIdsError) {
+        console.error("Error getting user ids:", userIdsError);
+        // Handle the error
+        callback(userIdsError, null);
+      } else {
+        // Call saveNotifications with retrieved user ids
+        saveNotifications(questionId, userIds);
+        callback(null, null);
+      }
+    });
+  });
+};
+
+const getAllUserIdsExceptCurrent = (currentUserId, callback) => {
+  const allUserIdsQuery = `
+    SELECT id
+    FROM users
+    WHERE id <> ?
+  `;
+
+  pool.query(
+    allUserIdsQuery,
+    [currentUserId],
+    (userIdsError, userIdsResult) => {
+      if (userIdsError) {
+        console.error("Error executing user ids query:", userIdsError);
+        return callback(userIdsError, null);
+      }
+
+      const userIds = userIdsResult.map((user) => user.id);
+      callback(null, userIds);
+    }
+  );
+};
+
+const saveNotifications = (questionId, userIds) => {
+  const notificationMessage = "A new question has been added,";
+
+  userIds.forEach((userId) => {
+    // Assuming you have a function to generate notification_id
+    const notificationId = uuidv4();
+
+    const query = `
+      INSERT INTO question_notifications (notification_id, user_id, question_id, notification_message, is_seen)
+      VALUES (?, ?, ?, ?, FALSE)
+    `;
+
+    // Execute the query using your database connection
+    pool.query(
+      query,
+      [notificationId, userId, questionId, notificationMessage],
+      (error, result) => {
+        if (error) {
+          console.error("Error saving notification:", error);
+        } else {
+          console.log("Notification saved for user:", userId);
+        }
+      }
+    );
   });
 };
 
@@ -662,6 +723,68 @@ const deleteQuestion = async (questionId, callback) => {
   });
 };
 
+const getNotificationsWithUrls = (userId, callback) => {
+  const query = `
+    SELECT
+      qn.notification_id,
+      qn.user_id,
+      u.username AS notifier_username,
+      CONCAT('http://localhost:3000/knowledge-share/', REPLACE(REPLACE(u.username, ' ', '-'), '.', '-'), '/questions/', qn.question_id) AS question_url,
+      qn.notification_message,
+      qn.created_at,
+      qn.is_seen,
+      qn.seen_at
+    FROM
+      question_notifications qn
+    JOIN
+      questions q ON qn.question_id = q.id
+    JOIN
+      users u ON q.user_id = u.id
+    WHERE
+      qn.user_id = ?
+    ORDER BY
+      qn.created_at DESC;
+  `;
+
+  pool.query(query, [userId], (error, results) => {
+    if (error) {
+      console.error("Error executing notifications query:", error);
+      return callback(error, null);
+    }
+
+    // Process the results as needed
+    const notifications = results.map((row) => ({
+      notificationId: row.notification_id,
+      userId: row.user_id,
+      notifierUsername: row.notifier_username,
+      questionUrl: row.question_url,
+      notificationMessage: row.notification_message,
+      createdAt: row.created_at,
+      isSeen: row.is_seen,
+      seenAt: row.seen_at,
+    }));
+
+    callback(null, notifications);
+  });
+};
+
+const markNotificationAsSeen = (notificationId, userId, callback) => {
+  const query = `
+    UPDATE question_notifications
+    SET is_seen = TRUE, seen_at = CURRENT_TIMESTAMP
+    WHERE notification_id = ? AND user_id = ?
+  `;
+
+  // Execute the query using your database connection
+  pool.query(query, [notificationId, userId], (error, result) => {
+    if (error) {
+      return callback(error, null);
+    } else {
+      callback(null, notificationId);
+    }
+  });
+};
+
 module.exports = {
   saveImage,
   saveQuestionTags,
@@ -673,4 +796,6 @@ module.exports = {
   getRecentQuestions,
   getUserQuestions,
   deleteQuestion,
+  getNotificationsWithUrls,
+  markNotificationAsSeen,
 };
