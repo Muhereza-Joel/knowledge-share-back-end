@@ -73,7 +73,7 @@ router.get("/tagged/:tagId", (req, res) => {
     if (error) {
       console.error("Error getting all questions:", error);
       return res.status(500).json({ error: "Internal Server Error" });
-    }s
+    }
 
     res.json(allQuestions);
   }, tagId); 
