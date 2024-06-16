@@ -8,6 +8,7 @@ const tagRoutes = require('./routes/tags');
 const eventRoutes = require('./routes/event');
 const commentRoutes = require('./routes/comments');
 const categoryRoutes = require('./routes/categories');
+const productRoutes = require('./routes/products');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -26,6 +27,7 @@ app.use('/api/v1/tags', tagRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/comments', commentRoutes);
 app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/products', productRoutes);
 
 // Start the server
 app.listen(port, host, () => {
