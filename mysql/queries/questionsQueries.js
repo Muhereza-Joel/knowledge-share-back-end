@@ -139,7 +139,7 @@ const saveQuestionTags = (questionId, tags, callback) => {
   });
 };
 
-const getAllQuestions = (callback) => {
+const getAllQuestions = (offset, limit, callback) => {
   const allQuestionsQuery = `
     SELECT
       q.id,
@@ -149,17 +149,18 @@ const getAllQuestions = (callback) => {
       q.created_at,
       q.updated_at,
       u.username,
-      pi.url as avatar_url,  -- Include avatar URL
+      pi.url as avatar_url,
       (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
     FROM
       questions q
     JOIN
       users u ON q.user_id = u.id
     LEFT JOIN
-      profile_images pi ON q.user_id = pi.user_id  -- Join profile_images table
+      profile_images pi ON q.user_id = pi.user_id
+    LIMIT ? OFFSET ?
   `;
 
-  pool.query(allQuestionsQuery, (error, questionsResult) => {
+  pool.query(allQuestionsQuery, [limit, offset], (error, questionsResult) => {
     if (error) {
       console.error("Error executing questions query:", error);
       return callback(error, null);
@@ -167,6 +168,10 @@ const getAllQuestions = (callback) => {
 
     const allQuestions = [];
     let processedCount = 0;
+
+    if (questionsResult.length === 0) {
+      return callback(null, allQuestions); // Return empty array if no questions found
+    }
 
     // Loop through each question
     for (const question of questionsResult) {

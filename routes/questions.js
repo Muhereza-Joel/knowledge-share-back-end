@@ -24,18 +24,19 @@ router.post("/question", async (req, res) => {
 });
 
 router.get("/all", (req, res) => {
-  questionQueries.getAllQuestions((error, allQuestions) => {
+  const offset = parseInt(req.query.offset) || 0;
+  const limit = parseInt(req.query.limit) || 10;
+
+  questionQueries.getAllQuestions(offset, limit, (error, allQuestions) => {
     if (error) {
       console.error("Error getting all questions:", error);
       return res.status(500).json({ error: "Internal Server Error" });
     }
 
-    // Add any additional processing or formatting if needed
-    // For example, you might want to filter, sort, or paginate the questions
-
     res.json(allQuestions);
   });
 });
+
 
 router.get("/recent", (req, res) => {
   questionQueries.getRecentQuestions((error, allQuestions) => {
