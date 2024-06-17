@@ -37,6 +37,18 @@ router.get("/all", (req, res) => {
   });
 });
 
+router.get("/category/:categoryId", (req, res) => {
+  const { categoryId } = req.params;
+  productQueries.getAllProductsByCategory(categoryId, (error, products) => {
+    if (error) {
+      console.error("Error fetching products:", error);
+      return res.status(500).json({ error: "Failed to fetch products" });
+    }
+    res.status(200).json(products);
+  });
+});
+
+
 // POST a new product
 router.post("/add", upload.array("image", 10), (req, res) => {
   try {

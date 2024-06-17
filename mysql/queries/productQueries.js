@@ -21,6 +21,31 @@ const getAllProducts = (callback) => {
   });
 };
 
+const getAllProductsByCategory = (categoryId, callback) => {
+  const query = `
+    SELECT 
+      p.*, 
+      GROUP_CONCAT(pc.name SEPARATOR ', ') AS categories
+    FROM 
+      products p
+      LEFT JOIN 
+      product_category_mapping cm ON p.id = cm.product_id
+      LEFT JOIN 
+      product_categories pc ON pc.id = cm.category_id
+    WHERE 
+      pc.id = ?
+    GROUP BY 
+      p.id`;
+
+  pool.query(query, [categoryId], (error, results) => {
+    if (error) {
+      return callback(error, null);
+    }
+    callback(null, results);
+  });
+};
+
+
 const addProduct = (newProduct, callback) => {
   pool.getConnection((err, connection) => {
     if (err) {
@@ -138,6 +163,7 @@ const deleteProduct = (id, callback) => {
 
 module.exports = {
   getAllProducts,
+  getAllProductsByCategory,
   addProduct,
   updateProduct,
   deleteProduct,
