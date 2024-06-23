@@ -150,13 +150,16 @@ const getAllQuestions = (offset, limit, callback) => {
       q.updated_at,
       u.username,
       pi.url as avatar_url,
-      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
+      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count,
+      CASE WHEN r.question_id IS NOT NULL THEN 1 ELSE 0 END as has_recommendations
     FROM
       questions q
     JOIN
       users u ON q.user_id = u.id
     LEFT JOIN
       profile_images pi ON q.user_id = pi.user_id
+    LEFT JOIN
+      recommendations r ON q.id = r.question_id
     LIMIT ? OFFSET ?
   `;
 
@@ -167,13 +170,11 @@ const getAllQuestions = (offset, limit, callback) => {
     }
 
     const allQuestions = [];
-    let processedCount = 0;
 
     if (questionsResult.length === 0) {
       return callback(null, allQuestions); // Return empty array if no questions found
     }
 
-    // Loop through each question
     for (const question of questionsResult) {
       const tagsQuery = `
         SELECT
@@ -224,7 +225,7 @@ const getAllQuestions = (offset, limit, callback) => {
             description: question.description,
             userId: question.user_id,
             username: question.username,
-            avatarUrl: question.avatar_url, // Include avatar URL
+            avatarUrl: question.avatar_url,
             created_at: question.created_at,
             updated_at: question.updated_at,
             tags: tags,
@@ -232,13 +233,12 @@ const getAllQuestions = (offset, limit, callback) => {
             votes: 0,
             answers: question.answer_count,
             views: 0,
+            hasRecommendations: question.has_recommendations === 1, // Convert 1/0 to boolean
           };
 
           allQuestions.push(formattedQuestion);
 
-          // Check if all questions have been processed
-          processedCount++;
-          if (processedCount === questionsResult.length) {
+          if (allQuestions.length === questionsResult.length) {
             return callback(null, allQuestions);
           }
         });
@@ -258,13 +258,16 @@ const getQuestionDetails = async (questionId, callback) => {
       q.updated_at,
       u.username,
       u.role,
-      pi.url as avatarUrl  -- Include avatar URL
+      pi.url as avatarUrl,  -- Include avatar URL
+      r.product_ids as recommendations  -- Include recommendations as JSON string
     FROM
       questions q
     JOIN
       users u ON q.user_id = u.id
     LEFT JOIN
-      profile_images pi ON q.user_id = pi.user_id  -- Join profile_images table  
+      profile_images pi ON q.user_id = pi.user_id  -- Join profile_images table
+    LEFT JOIN
+      recommendations r ON q.id = r.question_id  -- Join recommendations table
     WHERE
       q.id = ?
   `;
@@ -361,6 +364,11 @@ const getQuestionDetails = async (questionId, callback) => {
               updated_at: answer.updated_at,
             }));
 
+            const hasRecommendations = !!question.recommendations;
+            const recommendations = hasRecommendations
+              ? JSON.parse(question.recommendations)
+              : [];
+
             const formattedQuestion = {
               questionId: question.id,
               questionTitle: question.title,
@@ -375,6 +383,8 @@ const getQuestionDetails = async (questionId, callback) => {
               votes: 0, // Add logic to calculate votes, answers, and views if needed
               answers: answers,
               views: 0,
+              hasRecommendations: hasRecommendations,
+              recommendations: recommendations,
             };
 
             return callback(null, formattedQuestion);
@@ -384,6 +394,7 @@ const getQuestionDetails = async (questionId, callback) => {
     });
   });
 };
+
 
 const getAllQuestionsTagged = (callback, tagId = null) => {
   // Define the base query
@@ -397,13 +408,16 @@ const getAllQuestionsTagged = (callback, tagId = null) => {
       q.updated_at,
       u.username,
       pi.url as avatar_url,  -- Include avatar URL
-      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
+      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count,
+      CASE WHEN r.question_id IS NOT NULL THEN 1 ELSE 0 END as has_recommendations
     FROM
       questions q
     JOIN
       users u ON q.user_id = u.id
     LEFT JOIN
       profile_images pi ON q.user_id = pi.user_id  -- Join profile_images table
+    LEFT JOIN
+      recommendations r ON q.id = r.question_id  -- Join recommendations table
   `;
 
   // If tagId is provided, join with the tags table and add a WHERE clause
@@ -489,6 +503,7 @@ const getAllQuestionsTagged = (callback, tagId = null) => {
                 votes: 0,
                 answers: question.answer_count,
                 views: 0,
+                hasRecommendations: question.has_recommendations === 1, // Convert 1/0 to boolean
               };
 
               allQuestions.push(formattedQuestion);
@@ -506,28 +521,32 @@ const getAllQuestionsTagged = (callback, tagId = null) => {
   );
 };
 
+
 const getRecentQuestions = async (callback) => {
   const allQuestionsQuery = `
-  SELECT
-    q.id,
-    q.title,
-    q.description,
-    q.user_id,
-    q.created_at,
-    q.updated_at,
-    u.username,
-    pi.url as avatar_url,  -- Include avatar URL
-    (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
-  FROM
-    questions q
-  JOIN
-    users u ON q.user_id = u.id
-  LEFT JOIN
-    profile_images pi ON q.user_id = pi.user_id  -- Join profile_images table
-  ORDER BY
-    q.created_at DESC
-  LIMIT 100  -- Set the limit to 100 questions
-`;
+    SELECT
+      q.id,
+      q.title,
+      q.description,
+      q.user_id,
+      q.created_at,
+      q.updated_at,
+      u.username,
+      pi.url as avatar_url,
+      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count,
+      CASE WHEN r.question_id IS NOT NULL THEN 1 ELSE 0 END as has_recommendations
+    FROM
+      questions q
+    JOIN
+      users u ON q.user_id = u.id
+    LEFT JOIN
+      profile_images pi ON q.user_id = pi.user_id
+    LEFT JOIN
+      recommendations r ON q.id = r.question_id
+    ORDER BY
+      q.created_at DESC
+    LIMIT 100
+  `;
 
   pool.query(allQuestionsQuery, (error, questionsResult) => {
     if (error) {
@@ -538,112 +557,9 @@ const getRecentQuestions = async (callback) => {
     const allQuestions = [];
     let processedCount = 0;
 
-    // Loop through each question
-    for (const question of questionsResult) {
-      const tagsQuery = `
-      SELECT
-        t.id, t.name
-      FROM
-        tags t
-      JOIN
-        question_tag_mapping qtm ON t.id = qtm.tag_id
-      WHERE
-        qtm.question_id = ?
-    `;
-
-      pool.query(tagsQuery, [question.id], (tagsError, tagsResult) => {
-        if (tagsError) {
-          console.error("Error executing tags query:", tagsError);
-          return callback(tagsError, null);
-        }
-
-        const tags = Array.isArray(tagsResult)
-          ? tagsResult.map((tag) => ({ id: tag.id, name: tag.name }))
-          : [];
-
-        const imagesQuery = `
-        SELECT
-          url, size
-        FROM
-          question_images
-        WHERE
-          question_id = ?
-      `;
-
-        pool.query(imagesQuery, [question.id], (imagesError, imagesResult) => {
-          if (imagesError) {
-            console.error("Error executing images query:", imagesError);
-            return callback(imagesError, null);
-          }
-
-          const urls = Array.isArray(imagesResult)
-            ? imagesResult.map((image) => ({
-                url: image.url,
-                size: image.size,
-              }))
-            : [];
-
-          const formattedQuestion = {
-            questionId: question.id,
-            questionTitle: question.title,
-            description: question.description,
-            userId: question.user_id,
-            username: question.username,
-            avatarUrl: question.avatar_url, // Include avatar URL
-            created_at: question.created_at,
-            updated_at: question.updated_at,
-            tags: tags,
-            images: urls,
-            votes: 0,
-            answers: question.answer_count,
-            views: 0,
-          };
-
-          allQuestions.push(formattedQuestion);
-
-          // Check if all questions have been processed
-          processedCount++;
-          if (processedCount === questionsResult.length) {
-            return callback(null, allQuestions);
-          }
-        });
-      });
+    if (questionsResult.length === 0) {
+      return callback(null, allQuestions); // Return empty array if no questions found
     }
-  });
-};
-
-const getUserQuestions = async (userId, callback) => {
-  const userQuestionsQuery = `
-    SELECT
-      q.id,
-      q.title,
-      q.description,
-      q.user_id,
-      q.created_at,
-      q.updated_at,
-      u.username,
-      pi.url as avatar_url,
-      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count
-    FROM
-      questions q
-    JOIN
-      users u ON q.user_id = u.id
-    LEFT JOIN
-      profile_images pi ON q.user_id = pi.user_id
-    WHERE
-      q.user_id = ?
-    ORDER BY
-      q.created_at DESC
-    LIMIT 100
-  `;
-
-  pool.query(userQuestionsQuery, [userId], (error, questionsResult) => {
-    if (error) {
-      console.error("Error executing user questions query:", error);
-      return callback(error, null);
-    }
-
-    const userQuestions = [];
 
     questionsResult.forEach((question) => {
       const tagsQuery = `
@@ -703,11 +619,128 @@ const getUserQuestions = async (userId, callback) => {
             votes: 0,
             answers: question.answer_count,
             views: 0,
+            hasRecommendations: question.has_recommendations === 1, // Convert 1/0 to boolean
+          };
+
+          allQuestions.push(formattedQuestion);
+
+          processedCount++;
+          if (processedCount === questionsResult.length) {
+            return callback(null, allQuestions);
+          }
+        });
+      });
+    });
+  });
+};
+
+
+const getUserQuestions = async (userId, callback) => {
+  const userQuestionsQuery = `
+    SELECT
+      q.id,
+      q.title,
+      q.description,
+      q.user_id,
+      q.created_at,
+      q.updated_at,
+      u.username,
+      pi.url as avatar_url,
+      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count,
+      CASE WHEN r.question_id IS NOT NULL THEN 1 ELSE 0 END as has_recommendations
+    FROM
+      questions q
+    JOIN
+      users u ON q.user_id = u.id
+    LEFT JOIN
+      profile_images pi ON q.user_id = pi.user_id
+    LEFT JOIN
+      recommendations r ON q.id = r.question_id
+    WHERE
+      q.user_id = ?
+    ORDER BY
+      q.created_at DESC
+    LIMIT 100
+  `;
+
+  pool.query(userQuestionsQuery, [userId], (error, questionsResult) => {
+    if (error) {
+      console.error("Error executing user questions query:", error);
+      return callback(error, null);
+    }
+
+    const userQuestions = [];
+    let processedCount = 0;
+
+    if (questionsResult.length === 0) {
+      return callback(null, userQuestions); // Return empty array if no questions found
+    }
+
+    questionsResult.forEach((question) => {
+      const tagsQuery = `
+        SELECT
+          t.id, t.name
+        FROM
+          tags t
+        JOIN
+          question_tag_mapping qtm ON t.id = qtm.tag_id
+        WHERE
+          qtm.question_id = ?
+      `;
+
+      pool.query(tagsQuery, [question.id], (tagsError, tagsResult) => {
+        if (tagsError) {
+          console.error("Error executing tags query:", tagsError);
+          return callback(tagsError, null);
+        }
+
+        const tags = Array.isArray(tagsResult)
+          ? tagsResult.map((tag) => ({ id: tag.id, name: tag.name }))
+          : [];
+
+        const imagesQuery = `
+          SELECT
+            url, size
+          FROM
+            question_images
+          WHERE
+            question_id = ?
+        `;
+
+        pool.query(imagesQuery, [question.id], (imagesError, imagesResult) => {
+          if (imagesError) {
+            console.error("Error executing images query:", imagesError);
+            return callback(imagesError, null);
+          }
+
+          const urls = Array.isArray(imagesResult)
+            ? imagesResult.map((image) => ({
+                url: image.url,
+                size: image.size,
+              }))
+            : [];
+
+          const formattedQuestion = {
+            questionId: question.id,
+            questionTitle: question.title,
+            description: question.description,
+            userId: question.user_id,
+            username: question.username,
+            avatarUrl: question.avatar_url,
+            created_at: question.created_at,
+            updated_at: question.updated_at,
+            tags: tags,
+            images: urls,
+            votes: 0,
+            answers: question.answer_count,
+            views: 0,
+            hasRecommendations: question.has_recommendations === 1, // Convert 1/0 to boolean
           };
 
           userQuestions.push(formattedQuestion);
 
-          if (userQuestions.length === questionsResult.length) {
+          processedCount++;
+          if (processedCount === questionsResult.length) {
             return callback(null, userQuestions);
           }
         });
@@ -715,6 +748,7 @@ const getUserQuestions = async (userId, callback) => {
     });
   });
 };
+
 
 const deleteQuestion = async (questionId, callback) => {
   const query = `DELETE FROM questions WHERE id = ?`;
