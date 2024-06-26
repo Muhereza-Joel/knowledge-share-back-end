@@ -10,6 +10,8 @@ const commentRoutes = require('./routes/comments');
 const categoryRoutes = require('./routes/categories');
 const productRoutes = require('./routes/products');
 const recommendationsRoutes = require('./routes/recommendations');
+const ordersRoutes = require('./routes/orders');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -30,6 +32,8 @@ app.use('/api/v1/comments', commentRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/recommendations', recommendationsRoutes);
+app.use('/api/v1/orders', ordersRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 
 // Start the server
 app.listen(port, host, () => {

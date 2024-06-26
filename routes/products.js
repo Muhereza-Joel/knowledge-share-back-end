@@ -37,6 +37,18 @@ router.get("/all", (req, res) => {
   });
 });
 
+router.get("/all/:productId", (req, res) => {
+  const productId = req.params.productId;
+
+  productQueries.getProductDetails(productId, (error, products) => {
+    if (error) {
+      console.error("Error fetching product details:", error);
+      return res.status(500).json({ error: "Failed to fetch product details" });
+    }
+    res.status(200).json(products);
+  });
+});
+
 router.get("/category/:categoryId", (req, res) => {
   const { categoryId } = req.params;
   productQueries.getAllProductsByCategory(categoryId, (error, products) => {

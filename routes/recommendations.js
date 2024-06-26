@@ -17,4 +17,15 @@ router.post("/add", (req, res) => {
   });
 });
 
+router.get('/question/:questionId', (req, res) => {
+  const questionId = req.params.questionId;
+
+  recommendationsQueries.getQuestionRecommendations(questionId, (error, result) => {
+    if (error) {
+      return res.status(500).json({ error: 'Error retrieving recommendations' });
+    }
+    res.status(200).json(result);
+  });
+});
+
 module.exports = router;
