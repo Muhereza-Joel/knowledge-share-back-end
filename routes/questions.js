@@ -5,6 +5,10 @@ const path = require("path");
 const router = express.Router();
 const { v4: uuidv4 } = require("uuid");
 const questionQueries = require("../mysql/queries/questionsQueries");
+const {
+  broadcastNewQuestion,
+  broadcastDeleteQuestion,
+} = require("../websockets/websocket");
 
 router.post("/question", async (req, res) => {
   const { questionId } = req.body;
@@ -36,7 +40,6 @@ router.get("/all", (req, res) => {
     res.json(allQuestions);
   });
 });
-
 
 router.get("/recent", (req, res) => {
   questionQueries.getRecentQuestions((error, allQuestions) => {
@@ -77,51 +80,54 @@ router.get("/tagged/:tagId", (req, res) => {
     }
 
     res.json(allQuestions);
-  }, tagId); 
+  }, tagId);
 });
 
 router.put("/notifications/mark-seen/", (req, res) => {
-  const notificationId = req.body.notificationId; 
-  const userId = req.body.userId; 
+  const notificationId = req.body.notificationId;
+  const userId = req.body.userId;
 
-  questionQueries.markNotificationAsSeen(notificationId, userId, (error, notificationId) => {
-    if (error) {
-      console.error("Error marking notification as seen:", error);
-      return res.status(500).json({ error: "Internal Server Error" });
+  questionQueries.markNotificationAsSeen(
+    notificationId,
+    userId,
+    (error, notificationId) => {
+      if (error) {
+        console.error("Error marking notification as seen:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+      res.json(notificationId);
     }
-    res.json(notificationId);
-  }); 
-})
-
-router.get("/notifications/:userId", (req, res) => {
-  const userId = req.params.userId; 
-
-  questionQueries.getNotificationsWithUrls(userId,(error, allNotifications) => {
-    if (error) {
-      console.error("Error getting all notifications:", error);
-      return res.status(500).json({ error: "Internal Server Error" });
-    }
-    res.json(allNotifications);
-  }); 
+  );
 });
 
+router.get("/notifications/:userId", (req, res) => {
+  const userId = req.params.userId;
 
+  questionQueries.getNotificationsWithUrls(
+    userId,
+    (error, allNotifications) => {
+      if (error) {
+        console.error("Error getting all notifications:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
+      res.json(allNotifications);
+    }
+  );
+});
 
 router.delete("/delete/:questionId", (req, res) => {
-    const questionId = req.params.questionId;
+  const questionId = req.params.questionId;
 
-    questionQueries.deleteQuestion(
-      questionId,
-      (error, result) => {
-        if (error) {
-          console.error("Error deleting question:", error);
-          return res.status(500).json({ error: "Internal Server Error" });
-        }
+  questionQueries.deleteQuestion(questionId, (error, result) => {
+    if (error) {
+      console.error("Error deleting question:", error);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
 
-        res.json(result);
-      },
-    ); // Pass the tagId as the second parameter
-  });
+    res.json(result);
+    broadcastDeleteQuestion(questionId);
+  }); // Pass the tagId as the second parameter
+});
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -223,6 +229,16 @@ router.post("/add", upload.array("images", 5), (req, res) => {
     res
       .status(200)
       .json({ message: "Form submitted successfully!", imageUrls });
+
+    setTimeout(() => {
+      questionQueries.getQuestionById(questionId, (error, question) => {
+        if (error) {
+          console.error("Error fetching question:", error);
+        } else {
+          broadcastNewQuestion(question);
+        }
+      });
+    }, 2000);
   } catch (error) {
     console.error("Error processing the request:", error);
     res.status(500).json({ message: "Internal Server Error" });

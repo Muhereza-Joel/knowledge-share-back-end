@@ -247,6 +247,109 @@ const getAllQuestions = (offset, limit, callback) => {
   });
 };
 
+const getQuestionById = (questionId, callback) => {
+  const questionQuery = `
+    SELECT
+      q.id,
+      q.title,
+      q.description,
+      q.user_id,
+      q.created_at,
+      q.updated_at,
+      u.username,
+      pi.url as avatar_url,
+      (SELECT COUNT(*) FROM question_answers qa WHERE qa.question_id = q.id) as answer_count,
+      CASE WHEN r.question_id IS NOT NULL THEN 1 ELSE 0 END as has_recommendations
+    FROM
+      questions q
+    JOIN
+      users u ON q.user_id = u.id
+    LEFT JOIN
+      profile_images pi ON q.user_id = pi.user_id
+    LEFT JOIN
+      recommendations r ON q.id = r.question_id
+    WHERE
+      q.id = ?
+  `;
+
+  pool.query(questionQuery, [questionId], (error, questionResult) => {
+    if (error) {
+      console.error("Error executing question query:", error);
+      return callback(error, null);
+    }
+
+    if (questionResult.length === 0) {
+      return callback(null, null); // Return null if no question found
+    }
+
+    const question = questionResult[0];
+
+    const tagsQuery = `
+      SELECT
+        t.id, t.name
+      FROM
+        tags t
+      JOIN
+        question_tag_mapping qtm ON t.id = qtm.tag_id
+      WHERE
+        qtm.question_id = ?
+    `;
+
+    pool.query(tagsQuery, [question.id], (tagsError, tagsResult) => {
+      if (tagsError) {
+        console.error("Error executing tags query:", tagsError);
+        return callback(tagsError, null);
+      }
+
+      const tags = Array.isArray(tagsResult)
+        ? tagsResult.map((tag) => ({ id: tag.id, name: tag.name }))
+        : [];
+
+      const imagesQuery = `
+        SELECT
+          url, size
+        FROM
+          question_images
+        WHERE
+          question_id = ?
+      `;
+
+      pool.query(imagesQuery, [question.id], (imagesError, imagesResult) => {
+        if (imagesError) {
+          console.error("Error executing images query:", imagesError);
+          return callback(imagesError, null);
+        }
+
+        const urls = Array.isArray(imagesResult)
+          ? imagesResult.map((image) => ({
+              url: image.url,
+              size: image.size,
+            }))
+          : [];
+
+        const formattedQuestion = {
+          questionId: question.id,
+          questionTitle: question.title,
+          description: question.description,
+          userId: question.user_id,
+          username: question.username,
+          avatarUrl: question.avatar_url,
+          created_at: question.created_at,
+          updated_at: question.updated_at,
+          tags: tags,
+          images: urls,
+          votes: 0,
+          answers: question.answer_count,
+          views: 0,
+          hasRecommendations: question.has_recommendations === 1, // Convert 1/0 to boolean
+        };
+
+        return callback(null, formattedQuestion);
+      });
+    });
+  });
+};
+
 const getQuestionDetails = async (questionId, callback) => {
   const questionQuery = `
     SELECT
@@ -837,4 +940,5 @@ module.exports = {
   deleteQuestion,
   getNotificationsWithUrls,
   markNotificationAsSeen,
+  getQuestionById
 };
