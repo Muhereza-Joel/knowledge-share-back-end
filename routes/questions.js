@@ -29,7 +29,7 @@ router.post("/question", async (req, res) => {
 
 router.get("/all", (req, res) => {
   const offset = parseInt(req.query.offset) || 0;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 100;
 
   questionQueries.getAllQuestions(offset, limit, (error, allQuestions) => {
     if (error) {
@@ -172,6 +172,13 @@ router.post("/add-answer", upload.none(), (req, res) => {
 
 router.post("/add", upload.array("images", 5), (req, res) => {
   try {
+    const { questionTitle, description, userId, tags = [] } = req.body;
+
+    // Validate required fields
+    if (!questionTitle || !description || !userId || tags.length === 0) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     // Process the uploaded images
     const imageUrls = req.files.map((file) => {
       const imageUrl = `${req.protocol}://${req.get("host")}/${file.path}`;
@@ -179,13 +186,10 @@ router.post("/add", upload.array("images", 5), (req, res) => {
     });
 
     const questionId = uuidv4();
-    const title = req.body.questionTitle;
-    const description = req.body.description;
-    const userId = req.body.userId;
 
     questionQueries.saveQuestion(
       questionId,
-      title,
+      questionTitle,
       description,
       userId,
       (error, savedQuestionId) => {
@@ -198,7 +202,6 @@ router.post("/add", upload.array("images", 5), (req, res) => {
     );
 
     // Save question tags to the database
-    const tags = req.body.tags || [];
     questionQueries.saveQuestionTags(questionId, tags, (error, result) => {
       if (error) {
         console.error("Error saving question tags:", error);
@@ -238,7 +241,7 @@ router.post("/add", upload.array("images", 5), (req, res) => {
           broadcastNewQuestion(question);
         }
       });
-    }, 2000);
+    }, 10000);
   } catch (error) {
     console.error("Error processing the request:", error);
     res.status(500).json({ message: "Internal Server Error" });

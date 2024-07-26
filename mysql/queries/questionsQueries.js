@@ -70,9 +70,7 @@ const saveNotifications = (questionId, userIds) => {
       (error, result) => {
         if (error) {
           console.error("Error saving notification:", error);
-        } else {
-          console.log("Notification saved for user:", userId);
-        }
+        } 
       }
     );
   });
@@ -160,6 +158,7 @@ const getAllQuestions = (offset, limit, callback) => {
       profile_images pi ON q.user_id = pi.user_id
     LEFT JOIN
       recommendations r ON q.id = r.question_id
+    ORDER BY q.created_at DESC 
     LIMIT ? OFFSET ?
   `;
 
@@ -181,7 +180,7 @@ const getAllQuestions = (offset, limit, callback) => {
           t.id, t.name
         FROM
           tags t
-        JOIN
+        LEFT JOIN
           question_tag_mapping qtm ON t.id = qtm.tag_id
         WHERE
           qtm.question_id = ?

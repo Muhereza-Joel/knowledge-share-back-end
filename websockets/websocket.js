@@ -13,7 +13,6 @@ const io = socketIo(server, {
 
 // Listen for new connections
 io.on("connection", (socket) => {
-  console.log("a user connected");
 
   // Listen for incoming messages
   socket.on("message", (message) => {
@@ -22,7 +21,7 @@ io.on("connection", (socket) => {
 
   // Handle disconnection
   socket.on("disconnect", () => {
-    console.log("user disconnected");
+    // console.log("user disconnected");
   });
 });
 
